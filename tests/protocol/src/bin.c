@@ -360,6 +360,28 @@ ZTEST(thingset_bin, test_fetch_paths)
     THINGSET_ASSERT_REQUEST_HEX(req_hex, rsp_exp_hex);
 }
 
+ZTEST(thingset_bin, test_fetch_types)
+{
+    const char req_hex[] =
+        "05 "       /* FETCH */
+        "18 19 "    /* _Types */
+        "84 "       /* array with 4 elements */
+        "19 0207 "  /* uint 0x207 */
+        "19 0601 "  /* uint 0x601 */
+        "10 "       /* uint 0x10 */
+        "19 0702 "; /* uint 0x702 */
+
+    const char rsp_exp_hex[] =
+        "85 F6 "
+        "84 " /* array with 4 elements */
+        "06"  /* uint indicating type int32 */
+        "05"  /* uint indicating type uint32 */
+        "05"  /* uint indicating type uint32 */
+        "0F"; /* uint indicating type group */
+
+    THINGSET_ASSERT_REQUEST_HEX(req_hex, rsp_exp_hex);
+}
+
 ZTEST(thingset_bin, test_update_timestamp_zero_id)
 {
     const char req_hex[] = "07 00 A1 10 00";
