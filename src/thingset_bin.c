@@ -141,6 +141,12 @@ static int bin_serialize_path(struct thingset_context *ts,
                : -THINGSET_ERR_RESPONSE_TOO_LARGE;
 }
 
+static int bin_serialize_type(struct thingset_context *ts,
+                              const struct thingset_data_object *object)
+{
+    return zcbor_uint32_put(ts->encoder, object->type) ? 0 : -THINGSET_ERR_RESPONSE_TOO_LARGE;
+}
+
 static int bin_serialize_value(struct thingset_context *ts,
                                const struct thingset_data_object *object)
 {
@@ -386,6 +392,7 @@ static int bin_deserialize_child(struct thingset_context *ts,
             return -THINGSET_ERR_NOT_FOUND;
         }
         else if (ts->endpoint.object->id != THINGSET_ID_PATHS
+                 && ts->endpoint.object->id != THINGSET_ID_TYPES
                  && (*object)->parent_id != ts->endpoint.object->id)
         {
             return -THINGSET_ERR_BAD_REQUEST;
@@ -600,6 +607,7 @@ static struct thingset_api bin_api = {
     .serialize_value = bin_serialize_value,
     .serialize_key_value = bin_serialize_key_value,
     .serialize_path = bin_serialize_path,
+    .serialize_type = bin_serialize_type,
     .serialize_map_start = bin_serialize_map_start,
     .serialize_map_end = bin_serialize_map_end,
     .serialize_list_start = bin_serialize_list_start,
