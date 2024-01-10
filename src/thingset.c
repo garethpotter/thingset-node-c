@@ -577,9 +577,9 @@ int thingset_get_path(struct thingset_context *ts, char *buf, size_t size,
     }
 }
 
-char *thingset_get_type(const struct thingset_data_object *obj)
+char *type_to_tape_name(const enum thingset_type type)
 {
-    switch (obj->type) {
+    switch (type) {
         case THINGSET_TYPE_BOOL:
             return "bool";
         case THINGSET_TYPE_U8:
@@ -606,8 +606,6 @@ char *thingset_get_type(const struct thingset_data_object *obj)
             return "string";
         case THINGSET_TYPE_BYTES:
             return "buffer";
-        case THINGSET_TYPE_ARRAY:
-            return "array";
         case THINGSET_TYPE_RECORDS:
             return "record";
         case THINGSET_TYPE_GROUP:
@@ -615,8 +613,19 @@ char *thingset_get_type(const struct thingset_data_object *obj)
         case THINGSET_TYPE_SUBSET:
             return "subset";
         case THINGSET_TYPE_FN_VOID:
-            return "func";
+            return "()->()";
         case THINGSET_TYPE_FN_I32:
-            return "funci32";
+            return "()->(i32)";
+    }
+}
+
+char *thingset_get_type_name(const struct thingset_data_object *obj)
+{
+    switch (obj->type) {
+        case THINGSET_TYPE_ARRAY:
+            char *elementType = type_to_tape_name(obj->data->array->element_type);
+            return strcat(elementType, "[]");
+        default:
+            return type_to_tape_name(obj->type);
     }
 }

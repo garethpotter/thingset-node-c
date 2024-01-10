@@ -172,7 +172,7 @@ static int bin_serialize_metadata(struct thingset_context *ts,
         return err;
     }
 
-    char* type_value = thingset_get_type(object);
+    char* type_value = thingset_get_type_name(object);
     if ((err = zcbor_tsr_encode_ptr(ts->encoder, type_value, sizeof(type_value)))
     {
         return err;
