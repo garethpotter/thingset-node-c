@@ -32,7 +32,7 @@ static struct thingset_data_object root_object = THINGSET_GROUP(0, 0, "", NULL);
 static struct thingset_data_object paths_object =
     THINGSET_GROUP(0, THINGSET_ID_PATHS, "_Paths", NULL);
 static struct thingset_data_object types_object =
-    THINGSET_GROUP(0, THINGSET_ID_TYPES, "_Types", NULL);
+    THINGSET_GROUP(0, THINGSET_ID_METADATA, "_Types", NULL);
 
 static void check_id_duplicates(const struct thingset_data_object *objects, size_t num)
 {
@@ -527,7 +527,7 @@ int thingset_endpoint_by_id(struct thingset_context *ts, struct thingset_endpoin
         endpoint->object = &paths_object;
         return 0;
     }
-    else if (id == THINGSET_ID_TYPES) {
+    else if (id == THINGSET_ID_METADATA) {
         endpoint->object = &types_object;
         return 0;
     }
@@ -574,5 +574,49 @@ int thingset_get_path(struct thingset_context *ts, char *buf, size_t size,
     }
     else {
         return -THINGSET_ERR_RESPONSE_TOO_LARGE;
+    }
+}
+
+char *thingset_get_type(const struct thingset_data_object *obj)
+{
+    switch (obj->type) {
+        case THINGSET_TYPE_BOOL:
+            return "bool";
+        case THINGSET_TYPE_U8:
+            return "u8";
+        case THINGSET_TYPE_I8:
+            return "i8";
+        case THINGSET_TYPE_U16:
+            return "u16";
+        case THINGSET_TYPE_I16:
+            return "i16";
+        case THINGSET_TYPE_U32:
+            return "u32";
+        case THINGSET_TYPE_I32:
+            return "i32";
+        case THINGSET_TYPE_U64:
+            return "u64";
+        case THINGSET_TYPE_I64:
+            return "i64";
+        case THINGSET_TYPE_F32:
+            return "f32";
+        case THINGSET_TYPE_DECFRAC:
+            return "decimal";
+        case THINGSET_TYPE_STRING:
+            return "string";
+        case THINGSET_TYPE_BYTES:
+            return "buffer";
+        case THINGSET_TYPE_ARRAY:
+            return "array";
+        case THINGSET_TYPE_RECORDS:
+            return "record";
+        case THINGSET_TYPE_GROUP:
+            return "group";
+        case THINGSET_TYPE_SUBSET:
+            return "subset";
+        case THINGSET_TYPE_FN_VOID:
+            return "func";
+        case THINGSET_TYPE_FN_I32:
+            return "funci32";
     }
 }

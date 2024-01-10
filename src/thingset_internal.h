@@ -76,7 +76,8 @@ struct thingset_api
      *
      * @returns 0 for success or negative ThingSet response code in case of error
      */
-    int (*serialize_type)(struct thingset_context *ts, const struct thingset_data_object *object);
+    int (*serialize_metadata)(struct thingset_context *ts,
+                              const struct thingset_data_object *object);
 
     /**
      * Serialize the key and value of the specified data object.

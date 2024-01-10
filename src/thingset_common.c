@@ -198,7 +198,7 @@ int thingset_common_fetch(struct thingset_context *ts)
             }
 
             if (object->type == THINGSET_TYPE_GROUP && ts->endpoint.object->id != THINGSET_ID_PATHS
-                && ts->endpoint.object->id != THINGSET_ID_TYPES)
+                && ts->endpoint.object->id != THINGSET_ID_METADATA)
             {
                 return ts->api->serialize_response(ts, THINGSET_ERR_BAD_REQUEST, "%s is a group",
                                                    object->name);
@@ -219,8 +219,8 @@ int thingset_common_fetch(struct thingset_context *ts)
             if (ts->endpoint.object->id == THINGSET_ID_PATHS) {
                 err = ts->api->serialize_path(ts, object);
             }
-            else if (ts->endpoint.object->id == THINGSET_ID_TYPES) {
-                err = ts->api->serialize_type(ts, object);
+            else if (ts->endpoint.object->id == THINGSET_ID_METADATA) {
+                err = ts->api->serialize_metadata(ts, object);
             }
             else {
                 err = ts->api->serialize_value(ts, object);

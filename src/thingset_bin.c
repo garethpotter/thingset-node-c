@@ -141,10 +141,48 @@ static int bin_serialize_path(struct thingset_context *ts,
                : -THINGSET_ERR_RESPONSE_TOO_LARGE;
 }
 
-static int bin_serialize_type(struct thingset_context *ts,
-                              const struct thingset_data_object *object)
+static int bin_serialize_metadata(struct thingset_context *ts,
+                                  const struct thingset_data_object *object)
 {
-    return zcbor_uint32_put(ts->encoder, object->type) ? 0 : -THINGSET_ERR_RESPONSE_TOO_LARGE;
+    int err = bin_serialize_map_start(ts);
+    if (err) {
+        return err;
+    }
+
+    const char *name = "name";
+    if ((err = zcbor_tstr_encode_ptr(ts->encoder, name, sizeof(name))) {
+        return err;
+    }
+
+    if ((err = zcbor_tstr_encode_ptr(ts->encoder, object->name, object->name_len))) {
+        return err;
+    }
+
+    const char* path = "path";
+    if ((err = zcbor_tstr_encode_ptr(ts->encoder, path, sizeof(path))) {
+        return err;
+    }
+
+    if ((err = bin_serialize_path(ts->encoder, object)) {
+        return err;
+    }
+
+    const char* type = "type";
+    if ((err = zcbor_tstr_encode_ptr(ts->encoder, path, sizeof(path))) {
+        return err;
+    }
+
+    char* type_value = thingset_get_type(object);
+    if ((err = zcbor_tsr_encode_ptr(ts->encoder, type_value, sizeof(type_value)))
+    {
+        return err;
+    }
+
+    if ((err = bin_serialize_map_end(ts))) {
+        return err;
+    }
+
+    return 0;
 }
 
 static int bin_serialize_value(struct thingset_context *ts,
@@ -392,7 +430,7 @@ static int bin_deserialize_child(struct thingset_context *ts,
             return -THINGSET_ERR_NOT_FOUND;
         }
         else if (ts->endpoint.object->id != THINGSET_ID_PATHS
-                 && ts->endpoint.object->id != THINGSET_ID_TYPES
+                 && ts->endpoint.object->id != THINGSET_ID_METADATA
                  && (*object)->parent_id != ts->endpoint.object->id)
         {
             return -THINGSET_ERR_BAD_REQUEST;
@@ -607,7 +645,7 @@ static struct thingset_api bin_api = {
     .serialize_value = bin_serialize_value,
     .serialize_key_value = bin_serialize_key_value,
     .serialize_path = bin_serialize_path,
-    .serialize_type = bin_serialize_type,
+    .serialize_metadata = bin_serialize_metadata,
     .serialize_map_start = bin_serialize_map_start,
     .serialize_map_end = bin_serialize_map_end,
     .serialize_list_start = bin_serialize_list_start,
