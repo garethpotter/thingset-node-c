@@ -17,6 +17,26 @@
 #include <stdio.h>
 #include <string.h>
 
+static int bin_serialize_map_start(struct thingset_context *ts)
+{
+    return zcbor_map_start_encode(ts->encoder, UINT8_MAX) ? 0 : -THINGSET_ERR_RESPONSE_TOO_LARGE;
+}
+
+static int bin_serialize_map_end(struct thingset_context *ts)
+{
+    return zcbor_map_end_encode(ts->encoder, UINT8_MAX) ? 0 : -THINGSET_ERR_RESPONSE_TOO_LARGE;
+}
+
+static int bin_serialize_list_start(struct thingset_context *ts)
+{
+    return zcbor_list_start_encode(ts->encoder, UINT8_MAX) ? 0 : -THINGSET_ERR_RESPONSE_TOO_LARGE;
+}
+
+static int bin_serialize_list_end(struct thingset_context *ts)
+{
+    return zcbor_list_end_encode(ts->encoder, UINT8_MAX) ? 0 : -THINGSET_ERR_RESPONSE_TOO_LARGE;
+}
+
 int bin_serialize_response(struct thingset_context *ts, uint8_t code, const char *msg, ...)
 {
     va_list vargs;
@@ -150,32 +170,26 @@ static int bin_serialize_metadata(struct thingset_context *ts,
     }
 
     const char *name = "name";
-    if ((err = zcbor_tstr_encode_ptr(ts->encoder, name, sizeof(name))) {
-        return err;
+    if (!zcbor_tstr_encode_ptr(ts->encoder, name, 4)) {
+        return -THINGSET_ERR_RESPONSE_TOO_LARGE;
     }
 
-    if ((err = zcbor_tstr_encode_ptr(ts->encoder, object->name, object->name_len))) {
-        return err;
+    if (!zcbor_tstr_encode_ptr(ts->encoder, object->name, strlen(object->name))) {
+        return -THINGSET_ERR_RESPONSE_TOO_LARGE;
     }
 
-    const char* path = "path";
-    if ((err = zcbor_tstr_encode_ptr(ts->encoder, path, sizeof(path))) {
-        return err;
+    const char *type = "type";
+    if (!zcbor_tstr_encode_ptr(ts->encoder, type, 4)) {
+        return -THINGSET_ERR_RESPONSE_TOO_LARGE;
     }
 
-    if ((err = bin_serialize_path(ts->encoder, object)) {
-        return err;
+    char buf[128];
+    int len = thingset_get_type_name(ts, object, (char *)&buf, sizeof(buf));
+    if (len < 0) {
+        return -1;
     }
-
-    const char* type = "type";
-    if ((err = zcbor_tstr_encode_ptr(ts->encoder, path, sizeof(path))) {
-        return err;
-    }
-
-    char* type_value = thingset_get_type_name(object);
-    if ((err = zcbor_tsr_encode_ptr(ts->encoder, type_value, sizeof(type_value)))
-    {
-        return err;
+    if (!zcbor_tstr_encode_ptr(ts->encoder, buf, len)) {
+        return -THINGSET_ERR_RESPONSE_TOO_LARGE;
     }
 
     if ((err = bin_serialize_map_end(ts))) {
@@ -281,26 +295,6 @@ static int bin_serialize_key_value(struct thingset_context *ts,
     }
 
     return ts->api->serialize_value(ts, object);
-}
-
-static int bin_serialize_map_start(struct thingset_context *ts)
-{
-    return zcbor_map_start_encode(ts->encoder, UINT8_MAX) ? 0 : -THINGSET_ERR_RESPONSE_TOO_LARGE;
-}
-
-static int bin_serialize_map_end(struct thingset_context *ts)
-{
-    return zcbor_map_end_encode(ts->encoder, UINT8_MAX) ? 0 : -THINGSET_ERR_RESPONSE_TOO_LARGE;
-}
-
-static int bin_serialize_list_start(struct thingset_context *ts)
-{
-    return zcbor_list_start_encode(ts->encoder, UINT8_MAX) ? 0 : -THINGSET_ERR_RESPONSE_TOO_LARGE;
-}
-
-static int bin_serialize_list_end(struct thingset_context *ts)
-{
-    return zcbor_list_end_encode(ts->encoder, UINT8_MAX) ? 0 : -THINGSET_ERR_RESPONSE_TOO_LARGE;
 }
 
 static void bin_serialize_finish(struct thingset_context *ts)

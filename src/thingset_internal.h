@@ -301,6 +301,17 @@ int thingset_get_path(struct thingset_context *ts, char *buf, size_t size,
                       const struct thingset_data_object *obj);
 
 /**
+ * Gets the type of a given object as a string.
+ *
+ * @param ts Pointer to ThingSet context.
+ * @param obj Pointer to the object to get the path of.
+ * @param buf Pointer to the buffer to store the path.
+ * @param size Size of the buffer.
+ */
+int thingset_get_type_name(struct thingset_context *ts, const struct thingset_data_object *obj,
+                           char *buf, size_t size);
+
+/**
  * Process text mode desire.
  *
  * @param ts Pointer to ThingSet context.

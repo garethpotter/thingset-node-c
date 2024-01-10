@@ -577,7 +577,7 @@ int thingset_get_path(struct thingset_context *ts, char *buf, size_t size,
     }
 }
 
-char *type_to_tape_name(const enum thingset_type type)
+char *type_to_type_name(const enum thingset_type type)
 {
     switch (type) {
         case THINGSET_TYPE_BOOL:
@@ -612,11 +612,20 @@ char *type_to_tape_name(const enum thingset_type type)
             return "group";
         case THINGSET_TYPE_SUBSET:
             return "subset";
+        /* in theory, these last three will never be hit */
+        case THINGSET_TYPE_ARRAY:
+            return "array";
+        case THINGSET_TYPE_FN_VOID:
+            return "()->()";
+        case THINGSET_TYPE_FN_I32:
+            return "()->(i32)";
+        default:
+            return "";
     }
 }
 
-static int *get_function_arg_types(struct thingset_context *ts, uint16_t parent_id, char *buf,
-                                   size_t size)
+static int get_function_arg_types(struct thingset_context *ts, uint16_t parent_id, char *buf,
+                                  size_t size)
 {
     int len = 0;
     for (unsigned int i = 0; i < ts->num_objects; i++) {
@@ -625,12 +634,11 @@ static int *get_function_arg_types(struct thingset_context *ts, uint16_t parent_
                 if (size < 2) {
                     return -1;
                 }
-                buf[0] = ",";
-                buf[1] = " ";
-                len += 2;
+                len += sprintf(buf, ", ");
                 size -= 2;
+                buf += 2;
             }
-            char *elementType = type_to_tape_name(obj->data->array->element_type);
+            char *elementType = type_to_type_name(ts->data_objects[i].type);
             if (len > size) {
                 return -1;
             }
@@ -647,34 +655,36 @@ int thingset_get_type_name(struct thingset_context *ts, const struct thingset_da
 {
     switch (obj->type) {
         case THINGSET_TYPE_ARRAY:
-            char *elementType = type_to_tape_name(obj->data->array->element_type);
+            char *elementType = type_to_type_name(obj->data.array->element_type);
             if (sizeof(elementType) > size) {
                 return -1;
             }
             return sprintf(buf, "%s[]", elementType);
         case THINGSET_TYPE_FN_VOID:
         case THINGSET_TYPE_FN_I32:
-            buf[0] = "(";
-            int len = get_function_arg_types(ts, obj->id, buf + 1, size - 1);
+            sprintf(buf, "(");
+            int len = 1 + get_function_arg_types(ts, obj->id, buf + 1, size - 1);
             if (len < 0) {
                 return -1;
             }
-            if (size - len < 8) {
+            if (size - len < 8) { /* enough space to finish? */
                 return -1;
             }
-            char *return_type;
+            buf += len;
+            size -= len;
             switch (obj->type) {
                 case THINGSET_TYPE_FN_VOID:
-                    return_type = "()";
+                    len += sprintf(buf, ")->()");
                     break;
                 case THINGSET_TYPE_FN_I32:
-                    return_type = "(i32)";
+                    len += sprintf(buf, ")->(i32)");
+                    break;
+                default:
                     break;
             }
-            len += sprintf(buf, ")->%s");
             return len;
         default:
-            char *type = type_to_tape_name(obj->type);
+            char *type = type_to_type_name(obj->type);
             return sprintf(buf, "%s", type);
     }
 }
