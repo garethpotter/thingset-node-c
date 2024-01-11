@@ -27,12 +27,12 @@ extern struct thingset_data_object _thingset_data_object_list_end[];
 #define TYPE_SECTION_START(secname) _CONCAT(_##secname, _list_start)
 #endif /* STRUCT_SECTION_START_EXTERN */
 
-/* dummy objects to avoid using NULL pointer for root object or _Paths/_Types overlays */
+/* dummy objects to avoid using NULL pointer for root object or _Paths/_Metadata overlays */
 static struct thingset_data_object root_object = THINGSET_GROUP(0, 0, "", NULL);
 static struct thingset_data_object paths_object =
     THINGSET_GROUP(0, THINGSET_ID_PATHS, "_Paths", NULL);
-static struct thingset_data_object types_object =
-    THINGSET_GROUP(0, THINGSET_ID_METADATA, "_Types", NULL);
+static struct thingset_data_object metadata_object =
+    THINGSET_GROUP(0, THINGSET_ID_METADATA, "_Metadata", NULL);
 
 static void check_id_duplicates(const struct thingset_data_object *objects, size_t num)
 {
@@ -429,6 +429,10 @@ struct thingset_data_object *thingset_get_child_by_name(struct thingset_context 
         }
     }
 
+    if (len == strlen(metadata_object.name) && strncmp(name, metadata_object.name, len) == 0) {
+        return &metadata_object;
+    }
+
     return NULL;
 }
 
@@ -443,25 +447,16 @@ struct thingset_data_object *thingset_get_object_by_id(struct thingset_context *
     return NULL;
 }
 
-int thingset_endpoint_by_path(struct thingset_context *ts, struct thingset_endpoint *endpoint,
-                              const char *path, size_t path_len)
+struct thingset_data_object *thingset_get_object_by_path(struct thingset_context *ts,
+                                                         const char *path, size_t path_len,
+                                                         int *index)
 {
+    *index = THINGSET_ENDPOINT_INDEX_NONE;
+
     struct thingset_data_object *object = NULL;
     const char *start = path;
     const char *end;
     uint16_t parent = 0;
-
-    endpoint->index = THINGSET_ENDPOINT_INDEX_NONE;
-    endpoint->use_ids = false;
-
-    if (path_len == 0) {
-        endpoint->object = &root_object;
-        return 0;
-    }
-
-    if (start[0] == '/') {
-        return -THINGSET_ERR_NOT_A_GATEWAY;
-    }
 
     /* maximum depth of 10 assumed */
     for (int i = 0; i < 10; i++) {
@@ -472,13 +467,11 @@ int thingset_endpoint_by_path(struct thingset_context *ts, struct thingset_endpo
                 && start[0] <= '9')
             {
                 /* numeric ID to select index in an array of records */
-                endpoint->index = strtoul(start, NULL, 0);
-                endpoint->object = object;
+                *index = strtoul(start, NULL, 0);
             }
             else if (start[0] == '-') {
                 /* non-existent element behind the last array element */
-                endpoint->index = THINGSET_ENDPOINT_INDEX_NEW;
-                endpoint->object = object;
+                *index = THINGSET_ENDPOINT_INDEX_NEW;
             }
             else {
                 object = thingset_get_child_by_name(ts, parent, start, path + path_len - start);
@@ -502,6 +495,27 @@ int thingset_endpoint_by_path(struct thingset_context *ts, struct thingset_endpo
             }
         }
     }
+
+    return object;
+}
+
+int thingset_endpoint_by_path(struct thingset_context *ts, struct thingset_endpoint *endpoint,
+                              const char *path, size_t path_len)
+{
+    endpoint->index = THINGSET_ENDPOINT_INDEX_NONE;
+    endpoint->use_ids = false;
+
+    if (path_len == 0) {
+        endpoint->object = &root_object;
+        return 0;
+    }
+
+    if (path[0] == '/') {
+        return -THINGSET_ERR_NOT_A_GATEWAY;
+    }
+
+    struct thingset_data_object *object =
+        thingset_get_object_by_path(ts, path, path_len, &endpoint->index);
 
     endpoint->object = object;
 
@@ -528,7 +542,7 @@ int thingset_endpoint_by_id(struct thingset_context *ts, struct thingset_endpoin
         return 0;
     }
     else if (id == THINGSET_ID_METADATA) {
-        endpoint->object = &types_object;
+        endpoint->object = &metadata_object;
         return 0;
     }
 

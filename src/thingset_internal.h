@@ -288,6 +288,18 @@ struct thingset_data_object *thingset_get_child_by_name(struct thingset_context 
 struct thingset_data_object *thingset_get_object_by_id(struct thingset_context *ts, uint16_t id);
 
 /**
+ * Get an object by its path.
+ *
+ * @param ts Pointer to ThingSet context.
+ * @param path Path to the object
+ * @param path_len Length of path
+ * @param index Pointer to an index which may be decoded as part of the path
+ */
+struct thingset_data_object *thingset_get_object_by_path(struct thingset_context *ts,
+                                                         const char *path, size_t path_len,
+                                                         int *index);
+
+/**
  * Get the relative path of an object
  *
  * @param ts Pointer to ThingSet context.
