@@ -170,18 +170,20 @@ static int bin_serialize_metadata(struct thingset_context *ts,
     }
 
     const char *name = "name";
-    if (!zcbor_tstr_encode_ptr(ts->encoder, name, 4)) {
-        return -THINGSET_ERR_RESPONSE_TOO_LARGE;
-    }
+    if (!zcbor_tstr_encode_ptr(ts->encoder, name, sizeof(name) - 1)))
+        {
+            return -THINGSET_ERR_RESPONSE_TOO_LARGE;
+        }
 
-    if (!zcbor_tstr_encode_ptr(ts->encoder, object->name, strlen(object->name))) {
+    if (!zcbor_tstr_put_term(ts->encoder, object->name)) {
         return -THINGSET_ERR_RESPONSE_TOO_LARGE;
     }
 
     const char *type = "type";
-    if (!zcbor_tstr_encode_ptr(ts->encoder, type, 4)) {
-        return -THINGSET_ERR_RESPONSE_TOO_LARGE;
-    }
+    if (!zcbor_tstr_encode_ptr(ts->encoder, type, sizeof(type) - 1)))
+        {
+            return -THINGSET_ERR_RESPONSE_TOO_LARGE;
+        }
 
     char buf[128];
     int len = thingset_get_type_name(ts, object, (char *)&buf, sizeof(buf));

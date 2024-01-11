@@ -34,6 +34,12 @@ static struct thingset_data_object paths_object =
 static struct thingset_data_object metadata_object =
     THINGSET_GROUP(0, THINGSET_ID_METADATA, "_Metadata", NULL);
 
+static char *type_name_lookup[THINGSET_TYPE_FN_I32 + 1] = {
+    "bool",   "u8",    "i8",     "u16",     "i16",      "u32",    "i32",
+    "u64",    "i64",   "f32",    "decimal", "string",   "buffer", "array",
+    "record", "group", "subset", "()->()",  "()->(i32)"
+};
+
 static void check_id_duplicates(const struct thingset_data_object *objects, size_t num)
 {
     for (unsigned int i = 0; i < num; i++) {
@@ -591,51 +597,9 @@ int thingset_get_path(struct thingset_context *ts, char *buf, size_t size,
     }
 }
 
-char *type_to_type_name(const enum thingset_type type)
+static inline char *type_to_type_name(const enum thingset_type type)
 {
-    switch (type) {
-        case THINGSET_TYPE_BOOL:
-            return "bool";
-        case THINGSET_TYPE_U8:
-            return "u8";
-        case THINGSET_TYPE_I8:
-            return "i8";
-        case THINGSET_TYPE_U16:
-            return "u16";
-        case THINGSET_TYPE_I16:
-            return "i16";
-        case THINGSET_TYPE_U32:
-            return "u32";
-        case THINGSET_TYPE_I32:
-            return "i32";
-        case THINGSET_TYPE_U64:
-            return "u64";
-        case THINGSET_TYPE_I64:
-            return "i64";
-        case THINGSET_TYPE_F32:
-            return "f32";
-        case THINGSET_TYPE_DECFRAC:
-            return "decimal";
-        case THINGSET_TYPE_STRING:
-            return "string";
-        case THINGSET_TYPE_BYTES:
-            return "buffer";
-        case THINGSET_TYPE_RECORDS:
-            return "record";
-        case THINGSET_TYPE_GROUP:
-            return "group";
-        case THINGSET_TYPE_SUBSET:
-            return "subset";
-        /* in theory, these last three will never be hit */
-        case THINGSET_TYPE_ARRAY:
-            return "array";
-        case THINGSET_TYPE_FN_VOID:
-            return "()->()";
-        case THINGSET_TYPE_FN_I32:
-            return "()->(i32)";
-        default:
-            return "";
-    }
+    return type_name_lookup[type];
 }
 
 static int get_function_arg_types(struct thingset_context *ts, uint16_t parent_id, char *buf,
@@ -648,9 +612,9 @@ static int get_function_arg_types(struct thingset_context *ts, uint16_t parent_i
                 if (size < 2) {
                     return -1;
                 }
-                len += sprintf(buf, ", ");
-                size -= 2;
-                buf += 2;
+                len += sprintf(buf, ",");
+                size -= 1;
+                buf += 1;
             }
             char *elementType = type_to_type_name(ts->data_objects[i].type);
             if (len > size) {

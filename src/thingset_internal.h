@@ -69,7 +69,7 @@ struct thingset_api
     int (*serialize_path)(struct thingset_context *ts, const struct thingset_data_object *object);
 
     /**
-     * Serialize the type for the specified data object.
+     * Serialize the metadata (including the type) for the specified data object.
      *
      * @param ts Pointer to ThingSet context
      * @param object Pointer to data object
