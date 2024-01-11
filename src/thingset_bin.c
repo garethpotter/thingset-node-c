@@ -186,7 +186,7 @@ static int bin_serialize_metadata(struct thingset_context *ts,
     char buf[128];
     int len = thingset_get_type_name(ts, object, (char *)&buf, sizeof(buf));
     if (len < 0) {
-        return -1;
+        return -THINGSET_ERR_RESPONSE_TOO_LARGE;
     }
     if (!zcbor_tstr_encode_ptr(ts->encoder, buf, len)) {
         return -THINGSET_ERR_RESPONSE_TOO_LARGE;
