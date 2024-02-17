@@ -370,6 +370,45 @@ int thingset_bin_desire(struct thingset_context *ts)
     return -THINGSET_ERR_NOT_IMPLEMENTED;
 }
 
+#ifdef CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT
+int thingset_bin_begin_export_subsets_progressively(struct thingset_context *ts)
+{
+    zcbor_map_start_encode(ts->encoder, UINT8_MAX); /* is this enough items? */
+
+    return 0;
+}
+
+int thingset_bin_do_export_subsets_progressively(struct thingset_context *ts, uint16_t subsets,
+                                                 unsigned int *i, size_t *size)
+{
+    while (*i < ts->num_objects) {
+        if (ts->data_objects[*i].subsets & subsets) {
+            int ret = bin_serialize_key_value(ts, &ts->data_objects[*i]);
+            if (ret) {
+                return ret;
+            }
+        }
+        (*i)++;
+        ts->rsp_pos = ts->encoder->payload - ts->rsp;
+        if (ts->rsp_pos > ts->rsp_size / 2) { /* threshold for big enough? */
+            *size = ts->rsp_pos;
+            /* reset position of response buffer */
+            ts->rsp_pos = 0;
+            ts->encoder->payload_mut = ts->rsp;
+            return 1;
+        }
+    }
+
+    /* do not end the map; just leave the size as undetermined, because
+       it expects to go back to the start of the map to write its length
+       (this is supported by - if somewhat frowned upon in - the spec) */
+
+    ts->api->serialize_finish(ts);
+    *size = ts->rsp_pos;
+    return 0;
+}
+#endif /* CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT */
+
 static int bin_serialize_subsets(struct thingset_context *ts, uint16_t subsets)
 {
     bool success;
@@ -714,6 +753,42 @@ inline void thingset_bin_setup(struct thingset_context *ts, size_t rsp_buf_offse
     zcbor_new_encode_state(ts->encoder, ZCBOR_ARRAY_SIZE(ts->encoder), ts->rsp + rsp_buf_offset,
                            ts->rsp_size - rsp_buf_offset, 1);
 }
+
+#ifdef CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT
+int thingset_bin_begin_import_data_progressively(struct thingset_context *ts)
+{
+    return ts->api->deserialize_map_start(ts);
+}
+
+int thingset_bin_do_import_data_progressively(struct thingset_context *ts, uint8_t auth_flags,
+                                              size_t size, size_t *consumed)
+{
+    /* reset end at every parse to ensure we know when we have finished */
+    ts->decoder->payload_end = ts->msg + size;
+    uint32_t id;
+    if (zcbor_uint32_decode(ts->decoder, &id)) {
+        if (id <= UINT16_MAX) {
+            const struct thingset_data_object *object = thingset_get_object_by_id(ts, id);
+            if (object != NULL) {
+                if ((object->access & THINGSET_WRITE_MASK & auth_flags) != 0) {
+                    int ret = ts->api->deserialize_value(ts, object, false);
+                    if (ret != 0) {
+                        /* silently ignore this item if it caused an error */
+                        zcbor_any_skip(ts->decoder, NULL);
+                    }
+                }
+            }
+        }
+
+        *consumed = ts->decoder->payload - ts->msg;
+        ts->decoder->payload = ts->msg;
+        return ts->decoder->payload == ts->decoder->payload_end ? 0 : 1;
+    }
+
+    *consumed = ts->decoder->payload - ts->msg;
+    return 0;
+}
+#endif /* CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT */
 
 int thingset_bin_import_data(struct thingset_context *ts, uint8_t auth_flags,
                              enum thingset_data_format format)

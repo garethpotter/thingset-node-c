@@ -876,6 +876,36 @@ ZTEST(thingset_bin, test_export_item)
     zassert_mem_equal(buf_exp, buf_act, 2);
 }
 
+static size_t test_export_subsets_progressively(uint8_t *buf, size_t buf_size, uint8_t *comparand)
+{
+    int ret;
+    ret = thingset_begin_export_subsets_progressively(&ts, buf, buf_size, THINGSET_BIN_IDS_VALUES);
+    zassert_equal(ret, 0);
+
+    size_t total_size = 0;
+    size_t size;
+    int i = 0;
+    do {
+        ret = thingset_do_export_subsets_progressively(&ts, SUBSET_LIVE, &i, &size);
+        zassert_true(ret >= 0);
+        if (comparand) {
+            zassert_mem_equal(buf, comparand, size);
+            comparand += size;
+        }
+        total_size += size;
+    } while (ret != 0);
+    return total_size;
+}
+
+ZTEST(thingset_bin, test_export_subsets_progressively)
+{
+    uint8_t buf_large[128];
+    size_t large_size = test_export_subsets_progressively(buf_large, sizeof(buf_large), NULL);
+    uint8_t buf_small[32];
+    size_t small_size = test_export_subsets_progressively(buf_small, sizeof(buf_small), buf_large);
+    zassert_equal(large_size, small_size);
+}
+
 ZTEST(thingset_bin, test_iterate_subsets)
 {
     struct thingset_data_object *obj = NULL;

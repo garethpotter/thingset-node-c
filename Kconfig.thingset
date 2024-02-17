@@ -106,6 +106,12 @@ config THINGSET_METADATA_ENDPOINT
 	  The endpoint is disabled by default in order to reduce memory footprint for constrained
 	  devices.
 
+config THINGSET_PROGRESSIVE_IMPORT_EXPORT
+	bool "Enable progressive import and export."
+	default n
+	help
+	  When enabled, exposes APIs that facilitate loading of data larger than a given buffer.
+
 module = THINGSET
 module-str = thingset
 source "subsys/logging/Kconfig.template.log_config"
