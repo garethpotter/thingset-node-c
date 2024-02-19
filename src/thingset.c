@@ -571,6 +571,7 @@ struct thingset_data_object *thingset_get_object_by_id(struct thingset_context *
             return &(ts->data_objects[i]);
         }
     }
+#endif /* CONFIG_THINGSET_OBJECT_LOOKUP_MAP */
 
 #endif /* CONFIG_THINGSET_OBJECT_LOOKUP_MAP */
     return NULL;
