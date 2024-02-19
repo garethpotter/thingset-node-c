@@ -155,7 +155,7 @@ int thingset_export_subsets_progressively(struct thingset_context *ts, uint8_t *
                 return -THINGSET_ERR_NOT_IMPLEMENTED;
         }
     }
-    int ret = thingset_bin_export_subsets_progressively(ts, subsets, index, &size);
+    int ret = thingset_bin_export_subsets_progressively(ts, subsets, index, size);
     if (ret <= 0) {
         k_sem_give(&ts->lock);
     }
