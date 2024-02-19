@@ -371,16 +371,13 @@ int thingset_bin_desire(struct thingset_context *ts)
 }
 
 #ifdef CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT
-int thingset_bin_begin_export_subsets_progressively(struct thingset_context *ts)
+int thingset_bin_export_subsets_progressively(struct thingset_context *ts, uint16_t subsets,
+                                              unsigned int *i, size_t *size)
 {
-    zcbor_map_start_encode(ts->encoder, UINT8_MAX); /* is this enough items? */
+    if (*i == 0) {
+        zcbor_map_start_encode(ts->encoder, UINT8_MAX); /* is this enough items? */
+    }
 
-    return 0;
-}
-
-int thingset_bin_do_export_subsets_progressively(struct thingset_context *ts, uint16_t subsets,
-                                                 unsigned int *i, size_t *size)
-{
     while (*i < ts->num_objects) {
         if (ts->data_objects[*i].subsets & subsets) {
             int ret = bin_serialize_key_value(ts, &ts->data_objects[*i]);

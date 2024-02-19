@@ -131,34 +131,31 @@ int thingset_process_message(struct thingset_context *ts, const uint8_t *msg, si
 }
 
 #ifdef CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT
-int thingset_begin_export_subsets_progressively(struct thingset_context *ts, uint8_t *buf,
-                                                size_t buf_size, enum thingset_data_format format)
+int thingset_export_subsets_progressively(struct thingset_context *ts, uint8_t *buf,
+                                          size_t buf_size, uint16_t subsets,
+                                          enum thingset_data_format format, unsigned int *index,
+                                          size_t *size)
 {
-    if (k_sem_take(&ts->lock, K_MSEC(THINGSET_CONTEXT_LOCK_TIMEOUT_MS)) != 0) {
-        LOG_ERR("ThingSet context lock timed out");
-        return -THINGSET_ERR_INTERNAL_SERVER_ERR;
+    if (*index == 0) {
+        if (k_sem_take(&ts->lock, K_MSEC(THINGSET_CONTEXT_LOCK_TIMEOUT_MS)) != 0) {
+            LOG_ERR("ThingSet context lock timed out");
+            return -THINGSET_ERR_INTERNAL_SERVER_ERR;
+        }
+
+        ts->rsp = buf;
+        ts->rsp_size = buf_size;
+        ts->rsp_pos = 0;
+
+        switch (format) {
+            case THINGSET_BIN_IDS_VALUES:
+                ts->endpoint.use_ids = true;
+                thingset_bin_setup(ts, 0);
+                break;
+            default:
+                return -THINGSET_ERR_NOT_IMPLEMENTED;
+        }
     }
-
-    ts->rsp = buf;
-    ts->rsp_size = buf_size;
-    ts->rsp_pos = 0;
-
-    switch (format) {
-        case THINGSET_BIN_IDS_VALUES:
-            ts->endpoint.use_ids = true;
-            thingset_bin_setup(ts, 0);
-            break;
-        default:
-            return -THINGSET_ERR_NOT_IMPLEMENTED;
-    }
-
-    return thingset_bin_begin_export_subsets_progressively(ts);
-}
-
-int thingset_do_export_subsets_progressively(struct thingset_context *ts, uint16_t subsets,
-                                             unsigned int *i, size_t *size)
-{
-    int ret = thingset_bin_do_export_subsets_progressively(ts, subsets, i, size);
+    int ret = thingset_bin_export_subsets_progressively(ts, subsets, index, &size);
     if (ret <= 0) {
         k_sem_give(&ts->lock);
     }
