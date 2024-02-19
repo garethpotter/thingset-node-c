@@ -383,10 +383,8 @@ int thingset_bin_begin_import_data_progressively(struct thingset_context *ts);
 int thingset_bin_do_import_data_progressively(struct thingset_context *ts, uint8_t auth_flags,
                                               size_t size, size_t *consumed);
 
-int thingset_bin_begin_export_subsets_progressively(struct thingset_context *ts);
-
-int thingset_bin_do_export_subsets_progressively(struct thingset_context *ts, uint16_t subsets,
-                                                 unsigned int *i, size_t *size);
+int thingset_bin_export_subsets_progressively(struct thingset_context *ts, uint16_t subsets,
+                                              unsigned int *i, size_t *size);
 #endif /* CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT */
 
 int thingset_common_serialize_group(struct thingset_context *ts,

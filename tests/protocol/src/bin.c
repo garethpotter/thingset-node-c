@@ -879,14 +879,12 @@ ZTEST(thingset_bin, test_export_item)
 static size_t test_export_subsets_progressively(uint8_t *buf, size_t buf_size, uint8_t *comparand)
 {
     int ret;
-    ret = thingset_begin_export_subsets_progressively(&ts, buf, buf_size, THINGSET_BIN_IDS_VALUES);
-    zassert_equal(ret, 0);
-
-    size_t total_size = 0;
-    size_t size;
     int i = 0;
+    size_t size;
+    size_t total_size = 0;
     do {
-        ret = thingset_do_export_subsets_progressively(&ts, SUBSET_LIVE, &i, &size);
+        ret = thingset_export_subsets_progressively(&ts, buf, buf_size, SUBSET_LIVE,
+                                                    THINGSET_BIN_IDS_VALUES, &i, &size);
         zassert_true(ret >= 0);
         if (comparand) {
             zassert_mem_equal(buf, comparand, size);
