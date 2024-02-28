@@ -152,6 +152,7 @@ int thingset_export_subsets_progressively(struct thingset_context *ts, uint8_t *
                 thingset_bin_setup(ts, 0);
                 break;
             default:
+                k_sem_give(&ts->lock);
                 return -THINGSET_ERR_NOT_IMPLEMENTED;
         }
     }
