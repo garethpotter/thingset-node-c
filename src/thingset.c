@@ -133,7 +133,8 @@ int thingset_process_message(struct thingset_context *ts, const uint8_t *msg, si
 #ifdef CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT
 int thingset_export_subsets_progressively(struct thingset_context *ts, uint8_t *buf,
                                           size_t buf_size, uint16_t subsets,
-                                          enum thingset_data_format format, unsigned int *index)
+                                          enum thingset_data_format format, unsigned int *index,
+                                          size_t *size)
 {
     if (*index == 0) {
         if (k_sem_take(&ts->lock, K_MSEC(THINGSET_CONTEXT_LOCK_TIMEOUT_MS)) != 0) {
@@ -154,7 +155,7 @@ int thingset_export_subsets_progressively(struct thingset_context *ts, uint8_t *
                 return -THINGSET_ERR_NOT_IMPLEMENTED;
         }
     }
-    int ret = thingset_bin_export_subsets_progressively(ts, subsets, index);
+    int ret = thingset_bin_export_subsets_progressively(ts, subsets, index, size);
     if (ret <= 0) {
         k_sem_give(&ts->lock);
     }
