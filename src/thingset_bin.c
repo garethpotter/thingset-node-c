@@ -776,7 +776,7 @@ int thingset_bin_do_import_data_progressively(struct thingset_context *ts, uint8
                             zcbor_any_skip(ts->decoder, NULL);
                         } else {
                             /* reset decoder position to before we parsed the current ID */
-                            ts->decoder->payload = ts->msg + *consumed;
+                            ts->decoder->payload = ts->msg;
                             return 1; /* ask for more data */
                         }
                     }
