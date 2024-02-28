@@ -133,8 +133,7 @@ int thingset_process_message(struct thingset_context *ts, const uint8_t *msg, si
 #ifdef CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT
 int thingset_export_subsets_progressively(struct thingset_context *ts, uint8_t *buf,
                                           size_t buf_size, uint16_t subsets,
-                                          enum thingset_data_format format, unsigned int *index,
-                                          size_t *size)
+                                          enum thingset_data_format format, unsigned int *index)
 {
     if (*index == 0) {
         if (k_sem_take(&ts->lock, K_MSEC(THINGSET_CONTEXT_LOCK_TIMEOUT_MS)) != 0) {
@@ -155,7 +154,7 @@ int thingset_export_subsets_progressively(struct thingset_context *ts, uint8_t *
                 return -THINGSET_ERR_NOT_IMPLEMENTED;
         }
     }
-    int ret = thingset_bin_export_subsets_progressively(ts, subsets, index, size);
+    int ret = thingset_bin_export_subsets_progressively(ts, subsets, index);
     if (ret <= 0) {
         k_sem_give(&ts->lock);
     }
@@ -289,6 +288,7 @@ int thingset_begin_import_data_progressively(struct thingset_context *ts, const 
             break;
         default:
             err = -THINGSET_ERR_NOT_IMPLEMENTED;
+            k_sem_give(&ts->lock);
             break;
     }
 
@@ -296,9 +296,9 @@ int thingset_begin_import_data_progressively(struct thingset_context *ts, const 
 }
 
 int thingset_do_import_data_progressively(struct thingset_context *ts, uint8_t auth_flags,
-                                          size_t size, size_t *consumed)
+                                          size_t size, uint32_t *last_id, size_t *consumed)
 {
-    int ret = thingset_bin_do_import_data_progressively(ts, auth_flags, size, consumed);
+    int ret = thingset_bin_do_import_data_progressively(ts, auth_flags, size, last_id, consumed);
     if (ret <= 0) {
         k_sem_give(&ts->lock);
     }
