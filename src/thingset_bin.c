@@ -688,7 +688,7 @@ static int bin_deserialize_value(struct thingset_context *ts,
                 break;
             }
             index++;
-        } while (index < array->num_elements);
+        } while (index < array->max_elements);
 
         if (!check_only) {
             array->num_elements = index;
@@ -760,27 +760,32 @@ int thingset_bin_begin_import_data_progressively(struct thingset_context *ts)
 int thingset_bin_do_import_data_progressively(struct thingset_context *ts, uint8_t auth_flags,
                                               size_t size, uint32_t *last_id, size_t *consumed)
 {
-    /* reset end at every parse to ensure we know when we have finished */
-    ts->decoder->payload_end = ts->msg + size;
+    /* reset decoder state, but use current decoder payload position and element count
+     * (this handles both the first case, where we've decoded the two bytes of the map start,
+     * and subsequent cases, where we set the payload pointer back to the start of the buffer)
+     */
+    zcbor_new_encode_state(ts->decoder, ZCBOR_ARRAY_SIZE(ts->decoder), ts->decoder->payload, size,
+                           ts->decoder->elem_count);
     uint32_t id;
     while (zcbor_uint32_decode(ts->decoder, &id)) {
         if (id <= UINT16_MAX) {
             const struct thingset_data_object *object = thingset_get_object_by_id(ts, id);
-            if (object != NULL) {
-                if ((object->access & THINGSET_WRITE_MASK & auth_flags) != 0) {
-                    int ret = ts->api->deserialize_value(ts, object, false);
-                    if (ret != 0) {
-                        if (id == *last_id) {
-                            /* we got stuck here last time, so no point going back and asking
-                               for more data; just skip it and move on */
-                            zcbor_any_skip(ts->decoder, NULL);
-                        } else {
-                            /* reset decoder position to before we parsed the current ID */
-                            ts->decoder->payload = ts->msg;
-                            return 1; /* ask for more data */
-                        }
+            if (object != NULL && (object->access & THINGSET_WRITE_MASK & auth_flags) != 0) {
+                if (ts->api->deserialize_value(ts, object, false)) {
+                    if (id == *last_id) {
+                        /* we got stuck here last time, so no point going back and asking
+                            for more data; just skip it and move on */
+                        zcbor_any_skip(ts->decoder, NULL);
+                    }
+                    else {
+                        /* reset decoder position to the beginning of the buffer */
+                        ts->decoder->payload = ts->msg;
+                        return 1; /* ask for more data */
                     }
                 }
+            }
+            else {
+                zcbor_any_skip(ts->decoder, NULL);
             }
             *last_id = id;
         }
@@ -789,8 +794,9 @@ int thingset_bin_do_import_data_progressively(struct thingset_context *ts, uint8
     }
 
     *consumed = ts->decoder->payload - ts->msg;
-    ts->decoder->payload = ts->msg;
-    return ts->decoder->payload == ts->decoder->payload_end ? 0 : 1;
+    bool finished = ts->decoder->payload == ts->decoder->payload_end;
+    ts->decoder->payload = ts->msg; /* reset decoder position */
+    return finished ? 0 : 1;
 }
 #endif /* CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT */
 
