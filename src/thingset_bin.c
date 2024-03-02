@@ -764,8 +764,8 @@ int thingset_bin_do_import_data_progressively(struct thingset_context *ts, uint8
      * (this handles both the first case, where we've decoded the two bytes of the map start,
      * and subsequent cases, where we set the payload pointer back to the start of the buffer)
      */
-    zcbor_new_encode_state(ts->decoder, ZCBOR_ARRAY_SIZE(ts->decoder), ts->decoder->payload, size,
-                           ts->decoder->elem_count);
+    zcbor_new_encode_state(ts->decoder, ZCBOR_ARRAY_SIZE(ts->decoder), ts->decoder->payload_mut,
+                           size, ts->decoder->elem_count);
     uint32_t id;
     while (zcbor_uint32_decode(ts->decoder, &id)) {
         if (id <= UINT16_MAX) {
