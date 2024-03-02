@@ -310,6 +310,7 @@ int thingset_do_import_data_progressively(struct thingset_context *ts, uint8_t a
 int thingset_end_import_data_progressively(struct thingset_context *ts)
 {
     k_sem_give(&ts->lock);
+    return 0;
 }
 #endif /* CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT */
 
