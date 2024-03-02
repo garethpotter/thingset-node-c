@@ -765,7 +765,7 @@ int thingset_bin_do_import_data_progressively(struct thingset_context *ts, uint8
      * and subsequent cases, where we set the payload pointer back to the start of the buffer)
      */
     zcbor_new_encode_state(ts->decoder, ZCBOR_ARRAY_SIZE(ts->decoder), ts->decoder->payload_mut,
-                           size, ts->decoder->elem_count);
+                           size - (ts->decoder->payload - ts->msg), ts->decoder->elem_count);
     uint32_t id;
     while (zcbor_uint32_decode(ts->decoder, &id)) {
         if (id <= UINT16_MAX) {
@@ -794,6 +794,12 @@ int thingset_bin_do_import_data_progressively(struct thingset_context *ts, uint8
     }
 
     *consumed = ts->decoder->payload - ts->msg;
+    if (*consumed == 0 && size > 0) {
+        /* if we didn't manage to consume anything at this point, the data must be completely
+         * invalid, because it means we didn't even parse an ID, so just bail out
+         */
+        return -THINGSET_ERR_UNSUPPORTED_FORMAT;
+    }
     bool finished = ts->decoder->payload == ts->decoder->payload_end;
     ts->decoder->payload = ts->msg; /* reset decoder position */
     return finished ? 0 : 1;
