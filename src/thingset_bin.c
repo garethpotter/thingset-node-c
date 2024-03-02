@@ -372,7 +372,7 @@ int thingset_bin_desire(struct thingset_context *ts)
 
 #ifdef CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT
 int thingset_bin_export_subsets_progressively(struct thingset_context *ts, uint16_t subsets,
-                                              unsigned int *i, size_t *size)
+                                              unsigned int *i, size_t *len)
 {
     if (*i == 0) {
         zcbor_map_start_encode(ts->encoder, UINT8_MAX); /* is this enough items? */
@@ -388,7 +388,7 @@ int thingset_bin_export_subsets_progressively(struct thingset_context *ts, uint1
         (*i)++;
         ts->rsp_pos = ts->encoder->payload - ts->rsp;
         if (ts->rsp_pos > ts->rsp_size / 2) { /* threshold for big enough? */
-            *size = ts->rsp_pos;
+            *len = ts->rsp_pos;
             /* reset position of response buffer */
             ts->rsp_pos = 0;
             ts->encoder->payload_mut = ts->rsp;
@@ -401,7 +401,7 @@ int thingset_bin_export_subsets_progressively(struct thingset_context *ts, uint1
        (this is supported by - if somewhat frowned upon in - the spec) */
 
     ts->api->serialize_finish(ts);
-    *size = ts->rsp_pos;
+    *len = ts->rsp_pos;
     return 0;
 }
 #endif /* CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT */

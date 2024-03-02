@@ -1724,14 +1724,14 @@ int thingset_export_subsets(struct thingset_context *ts, uint8_t *buf, size_t bu
  * @param subsets Flags to select which subset(s) of data items should be exported
  * @param format Protocol data format to be used (text, binary with IDs or binary with names)
  * @param index Pointer to an integer which tracks the current object being exported
- * @param size Indicates the size of the data currently in the buffer
+ * @param len Number of bytes written to the buffer
  *
  * @returns 1 if there are more objects to export, 0 when complete or negative if an error.
  */
 int thingset_export_subsets_progressively(struct thingset_context *ts, uint8_t *buf,
                                           size_t buf_size, uint16_t subsets,
                                           enum thingset_data_format format, unsigned int *index,
-                                          size_t *size);
+                                          size_t *len);
 #endif /* CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT */
 
 /**
@@ -1811,7 +1811,8 @@ int thingset_begin_import_data_progressively(struct thingset_context *ts, const 
  * @param auth_flags Authentication flags to be used in this function (to override auth_flags)
  * @param size Size of the last chunk of data read into the buffer.
  * @param last_id ID of last object successfully processed.
- * @param consumed When the method returns, contains the number of bytes consumed by the last read.
+ * @param consumed When the method returns, contains the number of bytes consumed. This may be
+ * less than @ref size.
  *
  * @returns 1 if there is more data to parse, 0 on success, negative on error.
  */
