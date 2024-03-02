@@ -1818,6 +1818,15 @@ int thingset_begin_import_data_progressively(struct thingset_context *ts, const 
  */
 int thingset_do_import_data_progressively(struct thingset_context *ts, uint8_t auth_flags,
                                           size_t size, uint32_t *last_id, size_t *consumed);
+
+/**
+ * Completes the import of data from the buffer passed to @ref
+ * thingset_begin_import_data_progressively into data objects.
+ * Call this method if an import completes without errors.
+ *
+ * @param ts Pointer to ThingSet context.
+ */
+int thingset_end_import_data_progressively(struct thingset_context *ts);
 #endif /* CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT */
 
 /**

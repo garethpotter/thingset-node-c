@@ -301,10 +301,15 @@ int thingset_do_import_data_progressively(struct thingset_context *ts, uint8_t a
                                           size_t size, uint32_t *last_id, size_t *consumed)
 {
     int ret = thingset_bin_do_import_data_progressively(ts, auth_flags, size, last_id, consumed);
-    if (ret <= 0) {
+    if (ret < 0) {
         k_sem_give(&ts->lock);
     }
     return ret;
+}
+
+int thingset_end_import_data_progressively(struct thingset_context *ts)
+{
+    k_sem_give(&ts->lock);
 }
 #endif /* CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT */
 
