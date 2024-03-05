@@ -384,7 +384,7 @@ int thingset_bin_do_import_data_progressively(struct thingset_context *ts, uint8
                                               size_t size, uint32_t *last_id, size_t *consumed);
 
 int thingset_bin_export_subsets_progressively(struct thingset_context *ts, uint16_t subsets,
-                                              unsigned int *i, size_t *len);
+                                              unsigned int *index, size_t *len);
 #endif /* CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT */
 
 int thingset_common_serialize_group(struct thingset_context *ts,

@@ -372,20 +372,26 @@ int thingset_bin_desire(struct thingset_context *ts)
 
 #ifdef CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT
 int thingset_bin_export_subsets_progressively(struct thingset_context *ts, uint16_t subsets,
-                                              unsigned int *i, size_t *len)
+                                              unsigned int *index, size_t *len)
 {
-    if (*i == 0) {
-        zcbor_map_start_encode(ts->encoder, UINT8_MAX); /* is this enough items? */
+    if (*index == 0) {
+        size_t num_elements = 0;
+        for (int i = 0; i < ts->num_objects; i++) {
+            if (ts->data_objects[i].subsets & subsets) {
+                num_elements++;
+            }
+        }
+        zcbor_map_start_encode(ts->encoder, num_elements);
     }
 
-    while (*i < ts->num_objects) {
-        if (ts->data_objects[*i].subsets & subsets) {
-            int ret = bin_serialize_key_value(ts, &ts->data_objects[*i]);
-            if (ret) {
+    while (*index < ts->num_objects) {
+        if (ts->data_objects[*index].subsets & subsets) {
+            int ret = bin_serialize_key_value(ts, &ts->data_objects[*index]);
+            if (ret < 0) {
                 return ret;
             }
         }
-        (*i)++;
+        (*index)++;
         ts->rsp_pos = ts->encoder->payload - ts->rsp;
         if (ts->rsp_pos > ts->rsp_size / 2) { /* threshold for big enough? */
             *len = ts->rsp_pos;
@@ -395,10 +401,6 @@ int thingset_bin_export_subsets_progressively(struct thingset_context *ts, uint1
             return 1;
         }
     }
-
-    /* do not end the map; just leave the size as undetermined, because
-       it expects to go back to the start of the map to write its length
-       (this is supported by - if somewhat frowned upon in - the spec) */
 
     ts->api->serialize_finish(ts);
     *len = ts->rsp_pos;
