@@ -1798,26 +1798,14 @@ int thingset_import_data(struct thingset_context *ts, const uint8_t *data, size_
  * @param data Buffer containing ID/value map that should be written to the data objects
  * @param len Length of the data in the buffer
  * @param format Protocol data format to be used (text, binary with IDs or binary with names)
- */
-int thingset_begin_import_data_progressively(struct thingset_context *ts, const uint8_t *data,
-                                             size_t len, enum thingset_data_format format);
-
-/**
- * Performs the import of data from the buffer passed to @ref
- * thingset_begin_import_data_progressively into data objects.
- * Call this method until it returns 0.
- *
- * @param ts Pointer to ThingSet context.
  * @param auth_flags Authentication flags to be used in this function (to override auth_flags)
- * @param size Size of the last chunk of data read into the buffer.
  * @param last_id ID of last object successfully processed.
  * @param consumed When the method returns, contains the number of bytes consumed. This may be
  * less than @ref size.
- *
- * @returns 1 if there is more data to parse, 0 on success, negative on error.
  */
-int thingset_do_import_data_progressively(struct thingset_context *ts, uint8_t auth_flags,
-                                          size_t size, uint32_t *last_id, size_t *consumed);
+int thingset_do_import_data_progressively(struct thingset_context *ts, const uint8_t *data,
+                                          size_t len, enum thingset_data_format format,
+                                          uint8_t auth_flags, uint32_t *last_id, size_t *consumed);
 
 /**
  * Completes the import of data from the buffer passed to @ref

@@ -758,14 +758,16 @@ inline void thingset_bin_setup(struct thingset_context *ts, size_t rsp_buf_offse
 }
 
 #ifdef CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT
-int thingset_bin_begin_import_data_progressively(struct thingset_context *ts)
+int thingset_bin_import_data_progressively(struct thingset_context *ts, uint8_t auth_flags,
+                                           size_t size, uint32_t *last_id, size_t *consumed)
 {
-    return ts->api->deserialize_map_start(ts);
-}
+    if (*last_id == 0) {
+        int err = ts->api->deserialize_map_start(ts);
+        if (err) {
+            return -THINGSET_ERR_UNSUPPORTED_FORMAT;
+        }
+    }
 
-int thingset_bin_do_import_data_progressively(struct thingset_context *ts, uint8_t auth_flags,
-                                              size_t size, uint32_t *last_id, size_t *consumed)
-{
     /* reset decoder state, but use current decoder payload position and element count
      * (this handles both the first case, where we've decoded the two bytes of the map start,
      * and subsequent cases, where we set the payload pointer back to the start of the buffer)

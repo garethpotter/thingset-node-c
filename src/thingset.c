@@ -263,48 +263,49 @@ struct thingset_data_object *thingset_iterate_subsets(struct thingset_context *t
 }
 
 #ifdef CONFIG_THINGSET_PROGRESSIVE_IMPORT_EXPORT
-int thingset_begin_import_data_progressively(struct thingset_context *ts, const uint8_t *data,
-                                             size_t len, enum thingset_data_format format)
+int thingset_do_import_data_progressively(struct thingset_context *ts, const uint8_t *data,
+                                          size_t len, enum thingset_data_format format,
+                                          uint8_t auth_flags, uint32_t *last_id, size_t *consumed)
 {
     int err;
 
-    if (k_sem_take(&ts->lock, K_MSEC(THINGSET_CONTEXT_LOCK_TIMEOUT_MS)) != 0) {
-        LOG_ERR("ThingSet context lock timed out");
-        return -THINGSET_ERR_INTERNAL_SERVER_ERR;
+    if (*last_id == 0) {
+        if (k_sem_take(&ts->lock, K_MSEC(THINGSET_CONTEXT_LOCK_TIMEOUT_MS)) != 0) {
+            LOG_ERR("ThingSet context lock timed out");
+            return -THINGSET_ERR_INTERNAL_SERVER_ERR;
+        }
+
+        ts->msg = data;
+        ts->msg_len = len;
+        ts->msg_pos = 0;
+        ts->rsp = NULL;
+        ts->rsp_size = 0;
+        ts->rsp_pos = 0;
+
+        switch (format) {
+            case THINGSET_BIN_IDS_VALUES:
+                ts->endpoint.use_ids = true;
+                thingset_bin_setup(ts, 0);
+                ts->msg_payload = data;
+                ts->api->deserialize_payload_reset(ts);
+                err = thingset_bin_begin_import_data_progressively(ts);
+                break;
+            default:
+                err = -THINGSET_ERR_NOT_IMPLEMENTED;
+                k_sem_give(&ts->lock);
+                break;
+        }
+
+        if (err) {
+            return err;
+        }
     }
 
-    ts->msg = data;
-    ts->msg_len = len;
-    ts->msg_pos = 0;
-    ts->rsp = NULL;
-    ts->rsp_size = 0;
-    ts->rsp_pos = 0;
-
-    switch (format) {
-        case THINGSET_BIN_IDS_VALUES:
-            ts->endpoint.use_ids = true;
-            thingset_bin_setup(ts, 0);
-            ts->msg_payload = data;
-            ts->api->deserialize_payload_reset(ts);
-            err = thingset_bin_begin_import_data_progressively(ts);
-            break;
-        default:
-            err = -THINGSET_ERR_NOT_IMPLEMENTED;
-            k_sem_give(&ts->lock);
-            break;
-    }
-
-    return err;
-}
-
-int thingset_do_import_data_progressively(struct thingset_context *ts, uint8_t auth_flags,
-                                          size_t size, uint32_t *last_id, size_t *consumed)
-{
-    int ret = thingset_bin_do_import_data_progressively(ts, auth_flags, size, last_id, consumed);
-    if (ret < 0) {
+    err = thingset_bin_import_data_progressively(ts, auth_flags, len, last_id, consumed);
+    if (err < 0) {
         k_sem_give(&ts->lock);
     }
-    return ret;
+    return err;
 }
 
 int thingset_end_import_data_progressively(struct thingset_context *ts)
