@@ -266,7 +266,7 @@ struct thingset_data_object *thingset_iterate_subsets(struct thingset_context *t
 int thingset_begin_import_data_progressively(struct thingset_context *ts, const uint8_t *data,
                                              size_t len, enum thingset_data_format format)
 {
-    int err;
+    int err = 0;
 
     if (k_sem_take(&ts->lock, K_MSEC(THINGSET_CONTEXT_LOCK_TIMEOUT_MS)) != 0) {
         LOG_ERR("ThingSet context lock timed out");
