@@ -386,21 +386,25 @@ int thingset_bin_export_subsets_progressively(struct thingset_context *ts, uint1
 
     while (*index < ts->num_objects) {
         if (ts->data_objects[*index].subsets & subsets) {
+            /* update last length in case next serialisation runs out of room */
+            *len = ts->rsp_pos;
             int ret = bin_serialize_key_value(ts, &ts->data_objects[*index]);
             if (ret < 0) {
-                return ret;
+                /* buffer presumably full; reset pointer to position before
+                   we encoded this key-value pair and ask for more data */
+                ts->rsp_pos = 0;
+                ts->encoder->payload_mut = ts->rsp;
+                return 1;
             }
         }
         (*index)++;
         ts->rsp_pos = ts->encoder->payload - ts->rsp;
-        if (ts->rsp_pos > ts->rsp_size / 2) { /* threshold for big enough? */
-            *len = ts->rsp_pos;
-            /* reset position of response buffer */
-            ts->rsp_pos = 0;
-            ts->encoder->payload_mut = ts->rsp;
-            return 1;
-        }
+        *len = ts->rsp_pos;
     }
+
+    /* NB. there is no corresponding call to `zcbor_map_end_encode` because
+       we have already specified the exact number of elements in our call to
+       `zcbor_map_start_encode` above. */
 
     ts->api->serialize_finish(ts);
     *len = ts->rsp_pos;
