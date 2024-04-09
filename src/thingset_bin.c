@@ -208,8 +208,8 @@ static int bin_serialize_value(struct thingset_context *ts,
     int err;
 
     err = bin_serialize_simple_value(ts->encoder, object->data, object->type, object->detail);
-    if (err == 0) {
-        return 0;
+    if (err != -THINGSET_ERR_UNSUPPORTED_FORMAT) {
+        return err;
     }
 
     /* not a simple value */
@@ -266,6 +266,8 @@ static int bin_serialize_value(struct thingset_context *ts,
             err =
                 bin_serialize_simple_value(ts->encoder, data, array->element_type, array->decimals);
             if (err != 0) {
+                /* finish up to leave encoder in defined state */
+                zcbor_list_end_encode(ts->encoder, array->num_elements);
                 return err;
             }
         }
@@ -388,12 +390,22 @@ int thingset_bin_export_subsets_progressively(struct thingset_context *ts, uint1
             /* update last length in case next serialisation runs out of room */
             *len = ts->rsp_pos;
             int ret = bin_serialize_key_value(ts, &ts->data_objects[*index]);
-            if (ret < 0) {
-                /* buffer presumably full; reset pointer to position before
-                   we encoded this key-value pair and ask for more data */
-                ts->rsp_pos = 0;
-                ts->encoder->payload_mut = ts->rsp;
-                return 1;
+            if (ret == -THINGSET_ERR_RESPONSE_TOO_LARGE) {
+                if (ts->rsp_pos > 0) {
+                    /* reset pointer to position before we encoded this key-value
+                     * pair and ask for more data
+                     */
+                    ts->encoder->payload_mut = ts->rsp;
+                    ts->rsp_pos = 0;
+                    return 1;
+                }
+                else {
+                    /* this element alone is too large to fit the buffer */
+                    return -THINGSET_ERR_RESPONSE_TOO_LARGE;
+                }
+            }
+            else if (ret < 0) {
+                return ret;
             }
         }
         (*index)++;
@@ -671,36 +683,71 @@ static int bin_deserialize_value(struct thingset_context *ts,
     int err =
         bin_deserialize_simple_value(ts, object->data, object->type, object->detail, check_only);
 
-    if (err == -THINGSET_ERR_UNSUPPORTED_FORMAT && object->type == THINGSET_TYPE_ARRAY) {
-        struct thingset_array *array = object->data.array;
-        bool success;
+    if (err == -THINGSET_ERR_UNSUPPORTED_FORMAT) {
+        if (object->type == THINGSET_TYPE_ARRAY) {
+            struct thingset_array *array = object->data.array;
+            bool success;
 
-        success = zcbor_list_start_decode(ts->decoder);
-        if (!success) {
-            return -THINGSET_ERR_UNSUPPORTED_FORMAT;
-        }
-
-        size_t type_size = thingset_type_size(array->element_type);
-        int index = 0;
-        do {
-            /* using uint8_t pointer for byte-wise pointer arithmetics */
-            union thingset_data_pointer data = { .u8 = array->elements.u8 + index * type_size };
-
-            err = bin_deserialize_simple_value(ts, data, array->element_type, array->decimals,
-                                               check_only);
-            if (err != 0) {
-                break;
+            success = zcbor_list_start_decode(ts->decoder);
+            if (!success) {
+                return -THINGSET_ERR_UNSUPPORTED_FORMAT;
             }
-            index++;
-        } while (index < array->max_elements);
 
-        if (!check_only) {
-            array->num_elements = index;
+            size_t type_size = thingset_type_size(array->element_type);
+            int index = 0;
+            do {
+                /* using uint8_t pointer for byte-wise pointer arithmetics */
+                union thingset_data_pointer data = { .u8 = array->elements.u8 + index * type_size };
+
+                err = bin_deserialize_simple_value(ts, data, array->element_type, array->decimals,
+                                                   check_only);
+                if (err != 0) {
+                    break;
+                }
+                index++;
+            } while (index < array->max_elements);
+
+            if (!check_only) {
+                array->num_elements = index;
+            }
+
+            success = zcbor_list_end_decode(ts->decoder);
+            if (success) {
+                err = 0;
+            }
         }
+        else if (object->type == THINGSET_TYPE_RECORDS) {
+            struct thingset_records *records = object->data.records;
+            uint32_t id;
+            bool success;
 
-        success = zcbor_list_end_decode(ts->decoder);
-        if (success) {
-            err = 0;
+            success = zcbor_list_start_decode(ts->decoder);
+            for (unsigned int i = 0; i < records->num_records; i++) {
+                success = zcbor_map_start_decode(ts->decoder);
+                if (!success) {
+                    return -THINGSET_ERR_UNSUPPORTED_FORMAT;
+                }
+
+                while (zcbor_uint32_decode(ts->decoder, &id) && id < UINT16_MAX) {
+                    struct thingset_data_object *element = thingset_get_object_by_id(ts, id);
+                    if (element == NULL) {
+                        zcbor_any_skip(ts->decoder, NULL);
+                        continue;
+                    }
+                    union thingset_data_pointer data = { .u8 = ((uint8_t *)records->records)
+                                                               + (i * records->record_size)
+                                                               + element->data.offset };
+                    err = bin_deserialize_simple_value(ts, data, element->type, element->detail,
+                                                       check_only);
+                }
+
+                success = zcbor_map_end_decode(ts->decoder);
+            }
+
+            success = zcbor_list_end_decode(ts->decoder);
+            if (success) {
+                err = 0;
+            }
         }
     }
 
@@ -771,34 +818,57 @@ int thingset_bin_import_data_progressively(struct thingset_context *ts, uint8_t 
      */
     zcbor_new_decode_state(ts->decoder, ZCBOR_ARRAY_SIZE(ts->decoder), ts->decoder->payload_mut,
                            size - (ts->decoder->payload - ts->msg), ts->decoder->elem_count);
+
     uint32_t id;
+    size_t successfully_parsed_bytes = 0;
+    zcbor_state_t state = *ts->decoder;
     while (zcbor_uint32_decode(ts->decoder, &id)) {
         if (id <= UINT16_MAX) {
             const struct thingset_data_object *object = thingset_get_object_by_id(ts, id);
             if (object != NULL && (object->access & THINGSET_WRITE_MASK & auth_flags) != 0) {
-                if (ts->api->deserialize_value(ts, object, false)) {
+                if (ts->api->deserialize_value(ts, object, false) == 0) {
+                    successfully_parsed_bytes = ts->decoder->payload - ts->msg;
+                }
+                else {
                     if (id == *last_id) {
                         /* we got stuck here last time, so no point going back and asking
                             for more data; just skip it and move on */
-                        zcbor_any_skip(ts->decoder, NULL);
+                        if (zcbor_any_skip(ts->decoder, NULL)) {
+                            state = *ts->decoder;
+                            successfully_parsed_bytes = ts->decoder->payload - ts->msg;
+                        }
+                        else {
+                            /* if we can't even skip the element, the data must be corrupted */
+                            *consumed = successfully_parsed_bytes;
+                            return -THINGSET_ERR_REQUEST_INCOMPLETE;
+                        }
                     }
                     else {
                         /* reset decoder position to the beginning of the buffer */
                         ts->decoder->payload = ts->msg;
+                        ts->decoder->elem_count = state.elem_count;
+                        *consumed = successfully_parsed_bytes;
                         return 1; /* ask for more data */
                     }
                 }
             }
             else {
-                zcbor_any_skip(ts->decoder, NULL);
+                /* did not find this object in lookup or was not writable */
+                if (zcbor_any_skip(ts->decoder, NULL)) {
+                    state = *ts->decoder;
+                    successfully_parsed_bytes = ts->decoder->payload - ts->msg;
+                }
+                else {
+                    /* reincrement element count because ID will be parsed again */
+                    ts->decoder->elem_count = state.elem_count;
+                }
             }
+            state = *ts->decoder;
             *last_id = id;
         }
-
-        *consumed = ts->decoder->payload - ts->msg;
     }
 
-    *consumed = ts->decoder->payload - ts->msg;
+    *consumed = successfully_parsed_bytes;
     if (*consumed == 0 && size > 0) {
         /* if we didn't manage to consume anything at this point, the data must be completely
          * invalid, because it means we didn't even parse an ID, so just bail out
