@@ -118,7 +118,7 @@ int thingset_process_message(struct thingset_context *ts, const uint8_t *msg, si
     ts->rsp_size = rsp_size;
     ts->rsp_pos = 0;
 
-    if (ts->msg[0] >= 0x20) {
+    if (IS_ENABLED(CONFIG_THINGSET_TEXT_MODE) && ts->msg[0] >= 0x20) {
         ret = thingset_txt_process(ts);
     }
     else {
@@ -178,9 +178,11 @@ int thingset_export_subsets(struct thingset_context *ts, uint8_t *buf, size_t bu
     ts->rsp_pos = 0;
 
     switch (format) {
+#ifdef CONFIG_THINGSET_TEXT_MODE
         case THINGSET_TXT_NAMES_VALUES:
             thingset_txt_setup(ts);
             break;
+#endif
         case THINGSET_BIN_IDS_VALUES:
             ts->endpoint.use_ids = true;
             thingset_bin_setup(ts, 0);
@@ -217,9 +219,11 @@ int thingset_export_item(struct thingset_context *ts, uint8_t *buf, size_t buf_s
     ts->rsp_pos = 0;
 
     switch (format) {
+#ifdef CONFIG_THINGSET_TEXT_MODE
         case THINGSET_TXT_VALUES_ONLY:
             thingset_txt_setup(ts);
             break;
+#endif
         case THINGSET_BIN_VALUES_ONLY:
             ts->endpoint.use_ids = true;
             thingset_bin_setup(ts, 0);
@@ -371,11 +375,13 @@ int thingset_import_record(struct thingset_context *ts, const uint8_t *data, siz
     ts->endpoint = *endpoint;
 
     switch (format) {
+#ifdef CONFIG_THINGSET_TEXT_MODE
         case THINGSET_TXT_NAMES_VALUES:
             thingset_txt_setup(ts);
             ts->msg_payload = data;
             ts->api->deserialize_payload_reset(ts);
             break;
+#endif
         case THINGSET_BIN_IDS_VALUES:
             ts->endpoint.use_ids = true;
             thingset_bin_setup(ts, 0);
@@ -447,9 +453,11 @@ int thingset_report_path(struct thingset_context *ts, char *buf, size_t buf_size
     }
 
     switch (format) {
+#ifdef CONFIG_THINGSET_TEXT_MODE
         case THINGSET_TXT_NAMES_VALUES:
             thingset_txt_setup(ts);
             break;
+#endif
         case THINGSET_BIN_IDS_VALUES:
             ts->endpoint.use_ids = true;
             thingset_bin_setup(ts, 1);
