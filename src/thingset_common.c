@@ -346,7 +346,10 @@ int thingset_common_update(struct thingset_context *ts)
     ts->api->deserialize_map_start(ts);
 
     if (ts->endpoint.object->data.group_callback != NULL) {
-        ts->endpoint.object->data.group_callback(THINGSET_CALLBACK_PRE_WRITE);
+        int ret = ts->endpoint.object->data.group_callback(THINGSET_CALLBACK_PRE_WRITE);
+        if (ret < 0) {
+            return ts->api->serialize_response(ts, THINGSET_ERR_BAD_REQUEST, "Invalid parameters");
+        }
     }
 
     /* actually write data */
@@ -364,7 +367,10 @@ int thingset_common_update(struct thingset_context *ts)
     }
 
     if (ts->endpoint.object->data.group_callback != NULL) {
-        ts->endpoint.object->data.group_callback(THINGSET_CALLBACK_POST_WRITE);
+        int ret = ts->endpoint.object->data.group_callback(THINGSET_CALLBACK_POST_WRITE);
+        if (ret < 0) {
+            return ts->api->serialize_response(ts, THINGSET_ERR_BAD_REQUEST, "Invalid parameters");
+        }
     }
 
     /*
