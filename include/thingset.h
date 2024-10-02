@@ -1365,10 +1365,10 @@ enum thingset_callback_reason
 };
 
 /** Function to be called before/after read/write operations to groups. */
-typedef void (*thingset_group_callback_t)(enum thingset_callback_reason cb_reason);
+typedef int (*thingset_group_callback_t)(enum thingset_callback_reason cb_reason);
 
 /** Function to be called before/after read/write operations to records. */
-typedef void (*thingset_records_callback_t)(enum thingset_callback_reason cb_reason, int index);
+typedef int (*thingset_records_callback_t)(enum thingset_callback_reason cb_reason, int index);
 
 /** @cond INTERNAL_HIDDEN */
 
